@@ -2,8 +2,8 @@ import express from "express";
 import fetch from "node-fetch";
 import { WebSocketServer } from "ws";
 
-const API_KEY = "BU_YERGA_SENING_API_KEY";       // YouTube API Key
-const VIDEO_ID = "BU_YERGA_SENING_VIDEO_ID";     // Live Video ID
+const API_KEY = "AIzaSyDye-sPcSStm9cCAr3nvZ80XkskRwT3AsE";       // YouTube API Key
+const VIDEO_ID = "gvfq47XxscK-GGnH";     // Live Video ID
 
 const app = express();
 app.use(express.static("public"));
