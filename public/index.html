@@ -1,47 +1,186 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flag Game Live</title>
-  <style>
-    body {
-      margin: 0;
-      background: black;
-      color: white;
-      text-align: center;
-      font-family: Arial;
-    }
-    h1 { font-size: 22px; margin: 10px; }
-    #flags {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      padding: 10px;
-    }
-    .flag { font-size: 40px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flag Game Live</title>
+<style>
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+  position: relative;
+}
+h1 {
+  text-align: center;
+  margin: 10px;
+  font-size: 22px;
+}
+#flags {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+}
+.flag {
+  position: absolute;
+  font-size: 40px;
+  animation: float 5s linear infinite, spark 1s infinite alternate;
+}
+@keyframes float {
+  0% { transform: translateY(100vh); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-10vh); opacity: 0; }
+}
+@keyframes spark {
+  0%,100% { text-shadow:0 0 5px #fff,0 0 10px #ff0,0 0 15px #f0f; }
+  50% { text-shadow:0 0 10px #f0f,0 0 20px #ff0,0 0 30px #fff; }
+}
+.winner {
+  color: gold;
+  font-size: 60px;
+  text-align: center;
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  animation: blink 1s infinite, pop 0.5s ease-in-out;
+}
+@keyframes blink {
+  0%,50%,100%{opacity:1;}
+  25%,75%{opacity:0;}
+}
+@keyframes pop {
+  0% { transform: translate(-50%, -50%) scale(0.5); }
+  50% { transform: translate(-50%, -50%) scale(1.2); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+#timer {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 22px;
+  color: #0f0;
+}
+#scoreboard {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  color: #fff;
+  font-size: 18px;
+}
+</style>
 </head>
 <body>
 
 <h1>🌍 FLAG GAME LIVE</h1>
+<div id="timer">Round: 0 | 00:00</div>
 <div id="flags"></div>
+<div id="scoreboard"></div>
+<audio id="winnerSound" src="https://www.myinstants.com/media/sounds/tada-fanfare.mp3"></audio>
 
 <script>
 const ws = new WebSocket(location.origin.replace("http","ws"));
+const flagsDiv = document.getElementById("flags");
+const winnerSound = document.getElementById("winnerSound");
+const timerDiv = document.getElementById("timer");
+const scoreDiv = document.getElementById("scoreboard");
+
+let prevPlayers = {};
+let round = 0;
+let roundTime = 30; // har round 30 soniya
+
+let countdownInterval;
+
+function startTimer() {
+  clearInterval(countdownInterval);
+  let time = roundTime;
+  countdownInterval = setInterval(()=>{
+    const minutes = String(Math.floor(time/60)).padStart(2,'0');
+    const seconds = String(time%60).padStart(2,'0');
+    timerDiv.textContent = `Round: ${round} | ${minutes}:${seconds}`;
+    time--;
+    if(time<0){
+      clearInterval(countdownInterval);
+      endRound();
+    }
+  },1000);
+}
+
+function endRound() {
+  const keys = Object.keys(prevPlayers);
+  if(keys.length>=1){
+    alert(`Round ${round} over! Winner: ${keys[0]}`);
+  } else {
+    alert(`Round ${round} over! No winner`);
+  }
+  startRound();
+}
+
+function startRound() {
+  round++;
+  prevPlayers = {};
+  flagsDiv.innerHTML = "";
+  scoreDiv.innerHTML = "";
+  startTimer();
+}
+
+function updateScoreboard(players){
+  scoreDiv.innerHTML = "Players: " + Object.keys(players).join(", ");
+}
 
 ws.onmessage = e => {
   const players = JSON.parse(e.data);
-  const div = document.getElementById("flags");
-  div.innerHTML = "";
+  flagsDiv.innerHTML = "";
 
-  Object.values(players).forEach(flag => {
+  Object.entries(players).forEach(([user, flag]) => {
     const f = document.createElement("div");
     f.className = "flag";
     f.textContent = flag;
-    div.appendChild(f);
+    f.style.left = Math.random()*(window.innerWidth-50)+"px";
+    flagsDiv.appendChild(f);
   });
+
+  updateScoreboard(players);
+
+  // Winner aniqlash
+  const keys = Object.keys(players);
+  if(keys.length===1 && prevPlayers[keys[0]]){
+    const winDiv = document.createElement("div");
+    winDiv.className = "winner";
+    winDiv.textContent = `🏆 ${keys[0]} WIN! 🏆`;
+    flagsDiv.appendChild(winDiv);
+    winnerSound.play();
+
+    // Confetti
+    for(let i=0;i<30;i++){
+      const conf = document.createElement("div");
+      conf.textContent="🎉";
+      conf.style.position="absolute";
+      conf.style.left=Math.random()*window.innerWidth+"px";
+      conf.style.top="-50px";
+      conf.style.fontSize=(10+Math.random()*30)+"px";
+      conf.style.animation=`fall ${2+Math.random()*2}s linear forwards`;
+      flagsDiv.appendChild(conf);
+    }
+    setTimeout(()=>startRound(),5000); // 5 soniya keyin yangi round
+  }
+
+  prevPlayers = {...players};
 };
+
+// Confetti anim keyframes
+const style = document.createElement('style');
+style.innerHTML=`
+@keyframes fall{
+  0%{transform:translateY(0) rotate(0deg); opacity:1;}
+  100%{transform:translateY(100vh) rotate(720deg); opacity:0;}
+}`;
+document.head.appendChild(style);
+
+// Start first round
+startRound();
 </script>
 
 </body>
